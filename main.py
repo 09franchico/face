@@ -54,7 +54,7 @@ class FaceRecognitionApp:
             face_encodings = face_recognition.face_encodings(image)
 
             if face_encodings:
-                print(len(face_encodings[0]))
+                print(face_encodings[0])
                 self.photo_encoding = face_encodings[0]
                 messagebox.showinfo("Success", "Face encoding captured from photo!")
                 self.btn_start_video.config(state=tk.NORMAL)
