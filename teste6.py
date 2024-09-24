@@ -10,7 +10,7 @@ import pickle
 class FacialRecognitionApp:
     def __init__(self, window):
         self.window = window
-        self.window.title("Reconhecimento Facial")
+        self.window.title("Reconhecimento Facial em Tempo Real")
         
         self.video_capture = cv2.VideoCapture(0)
         
@@ -18,10 +18,7 @@ class FacialRecognitionApp:
         self.canvas.pack()
         
         self.btn_capture = tk.Button(window, text="Capturar e Gerar Encoding", command=self.capture_and_encode)
-        self.btn_capture.pack(side=tk.LEFT, padx=10)
-        
-        self.btn_detect = tk.Button(window, text="Detectar Faces", command=self.detect_faces)
-        self.btn_detect.pack(side=tk.RIGHT, padx=10)
+        self.btn_capture.pack(pady=10)
         
         self.known_face_encodings = []
         self.known_face_names = []
@@ -33,8 +30,24 @@ class FacialRecognitionApp:
     def update(self):
         ret, frame = self.video_capture.read()
         if ret:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            face_locations = face_recognition.face_locations(rgb_frame)
+            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+            
+            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+                matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
+                name = "Desconhecido"
+                
+                if True in matches:
+                    first_match_index = matches.index(True)
+                    name = self.known_face_names[first_match_index]
+                
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1)
+            
             self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+        
         self.window.after(15, self.update)
     
     def capture_and_encode(self):
@@ -49,7 +62,6 @@ class FacialRecognitionApp:
                 
                 face_encoding = face_recognition.face_encodings(rgb_frame, face_locations)[0]
                 
-                # Abrir modal para inserir o nome
                 name = self.get_person_name()
                 if name:
                     self.known_face_encodings.append(face_encoding)
@@ -65,28 +77,6 @@ class FacialRecognitionApp:
     
     def get_person_name(self):
         return simpledialog.askstring("Nome da Pessoa", "Digite o nome da pessoa capturada:")
-    
-    def detect_faces(self):
-        ret, frame = self.video_capture.read()
-        if ret:
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_recognition.face_locations(rgb_frame)
-            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-            
-            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
-                name = "Nao encontrada"
-                
-                if True in matches:
-                    first_match_index = matches.index(True)
-                    name = self.known_face_names[first_match_index]
-                
-                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-                cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1)
-            
-            cv2.imshow("Faces Detectadas", frame)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
     
     def load_known_faces(self):
         if os.path.exists("known_faces.pkl"):
